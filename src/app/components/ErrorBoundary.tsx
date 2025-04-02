@@ -1,10 +1,20 @@
 'use client';
 
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
+import * as Sentry from '@sentry/nextjs';
 
-function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+function ErrorFallback({
+  error,
+  resetErrorBoundary,
+}: {
+  error: Error;
+  resetErrorBoundary: () => void;
+}) {
   return (
-    <div role="alert" className="p-4 bg-red-100 border border-red-400 rounded text-red-700">
+    <div
+      role="alert"
+      className="p-4 bg-red-100 border border-red-400 rounded text-red-700"
+    >
       <p className="font-semibold">Something went wrong:</p>
       <pre className="mt-2 text-sm">{error.message}</pre>
       <button
@@ -17,13 +27,17 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
   );
 }
 
-export default function ErrorBoundary({ children }: { children: React.ReactNode }) {
+export default function ErrorBoundary({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ReactErrorBoundary
       FallbackComponent={ErrorFallback}
       onError={(error, info) => {
         console.error('Error caught by boundary:', error);
-        // Optional: send error to server
+        Sentry.captureException(error); // ✅ Log to Sentry
       }}
     >
       {children}
