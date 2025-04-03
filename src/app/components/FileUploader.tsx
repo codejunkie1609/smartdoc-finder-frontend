@@ -18,17 +18,17 @@ function logError(error: unknown) {
       console.error('[Dev Error Log]', error);
     }
   
-    fetch('/api/log-error', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: (error as any)?.message || 'Unknown error',
-        stack: (error as any)?.stack || '',
-        time: new Date().toISOString(),
-      }),
-    }).catch(console.error);
+    // fetch('/api/log-error', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     message: (error as any)?.message || 'Unknown error',
+    //     stack: (error as any)?.stack || '',
+    //     time: new Date().toISOString(),
+    //   }),
+    // }).catch(console.error);
   }
 
 export default function FileUploader() {

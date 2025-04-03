@@ -37,7 +37,7 @@ export default function ErrorBoundary({
       FallbackComponent={ErrorFallback}
       onError={(error, info) => {
         console.error('Error caught by boundary:', error);
-        Sentry.captureException(error); // ✅ Log to Sentry
+        //Sentry.captureException(error); 
       }}
     >
       {children}
