@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
 import { useState } from 'react';
 
 export default function FolderIndexer() {
   const [folderPath, setFolderPath] = useState('');
+  const [progress, setProgress] = useState(0);
   const [indexStatus, setIndexStatus] = useState('');
 
   function triggerStreamingIndex() {
@@ -12,17 +13,32 @@ export default function FolderIndexer() {
       return;
     }
 
-    setIndexStatus('Indexing in progress...\n');
-    const url = `http://localhost:8080/docsearch/api/files/index-directory-stream?path=${encodeURIComponent(folderPath)}`;
+    setProgress(0);
+    setIndexStatus('Indexing started...');
+    const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    const url = `${backendBaseUrl}/docsearch/api/files/index-directory-stream?path=${encodeURIComponent(folderPath)}`;
     const eventSource = new EventSource(url);
 
     eventSource.onmessage = (event) => {
-      setIndexStatus((prev) => prev + event.data + '\n');
+      try {
+        const data = JSON.parse(event.data);
+        if (data.indexedFiles !== undefined && data.totalFiles !== undefined) {
+          const percentage = (data.indexedFiles / data.totalFiles) * 100;
+          setProgress(percentage);
+          setIndexStatus(`Indexing: ${data.indexedFiles} of ${data.totalFiles} files`);
+          if (data.indexedFiles >= data.totalFiles) {
+            eventSource.close();
+            setIndexStatus('✅ Indexing complete!');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to parse SSE message', err);
+      }
     };
 
     eventSource.onerror = (err) => {
       console.error('[SSE Error]', err);
-      setIndexStatus((prev) => prev + '\n❌ An error occurred. Please check the console.');
+      setIndexStatus('❌ An error occurred. Please check the console.');
       eventSource.close();
     };
 
@@ -52,11 +68,15 @@ export default function FolderIndexer() {
         </button>
       </div>
 
-      {indexStatus && (
-        <div className="p-3 bg-white border border-gray-300 rounded text-left text-sm whitespace-pre-line font-mono">
-          {indexStatus}
-        </div>
-      )}
+      {/* Progress Bar */}
+      <div className="w-full bg-gray-300 rounded h-4">
+        <div
+          className="bg-green-500 h-4 rounded"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="text-center text-sm mt-2">{indexStatus}</div>
     </div>
   );
 }

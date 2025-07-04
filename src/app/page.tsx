@@ -1,6 +1,5 @@
 import FileUploader from './components/FileUploader';
 import ErrorBoundary from './components/ErrorBoundary'; 
-import * as Sentry from '@sentry/nextjs';
 
 
 
