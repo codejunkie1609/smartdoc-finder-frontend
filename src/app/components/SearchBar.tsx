@@ -1,99 +1,86 @@
+'use client';
+
 import { useState } from 'react';
 import { SearchResult } from '../search/page';
 
-interface Props {
-  onResults: (results: SearchResult[]) => void;
+// ✅ NEW: Define an interface for the full API response
+interface ApiResponse {
+  searchResults: SearchResult[];
+  generatedAnswer: string;
 }
 
-const RESULTS_PER_PAGE = 10;
+// ✅ UPDATED: Add the new prop for setting the answer
+interface Props {
+  setResults: (results: SearchResult[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  setGeneratedAnswer: (answer: string) => void; // Add this
+  loading: boolean;
+}
 
-export default function SearchBar({ onResults }: Props) {
+export default function SearchBar({ setResults, setLoading, setError, setGeneratedAnswer, loading }: Props) {
   const [query, setQuery] = useState('');
-  const [allResults, setAllResults] = useState<SearchResult[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const totalPages = Math.ceil(allResults.length / RESULTS_PER_PAGE);
-
-  const updateVisibleResults = (page: number, fullResults: SearchResult[]) => {
-    const start = (page - 1) * RESULTS_PER_PAGE;
-    const end = start + RESULTS_PER_PAGE;
-    onResults(fullResults.slice(start, end));
-  };
 
   async function handleSearch() {
     if (!query.trim()) return;
 
     setLoading(true);
-    setError('');
-    setCurrentPage(1);
+    setError(null);
+    setResults([]);
+    setGeneratedAnswer(''); // Clear previous answer
 
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       const res = await fetch(
-        `http://localhost:8080/docsearch/api/files/search?q=${encodeURIComponent(query)}&maxHits=100`
+        `${backendUrl}/docsearch/api/files/search?q=${encodeURIComponent(query)}&maxHits=100`
       );
-      if (!res.ok) throw new Error('Search failed');
-      const data: SearchResult[] = await res.json();
-      setAllResults(data);
-      updateVisibleResults(1, data);
-    } catch (err) {
+      
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(errorData || 'Search request failed');
+      }
+      
+      // ✅ CORRECTED: Use the new ApiResponse interface
+      const data: ApiResponse = await res.json();
+      setResults(data.searchResults || []);
+      setGeneratedAnswer(data.generatedAnswer || '');
+
+    } catch (err: unknown) {
       console.error(err);
-      setError('Failed to search. Please try again.');
+      let errorMessage = 'An unexpected error occurred.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   }
 
-  const handlePageChange = (delta: number) => {
-    const newPage = currentPage + delta;
-    if (newPage < 1 || newPage > totalPages) return;
-    setCurrentPage(newPage);
-    updateVisibleResults(newPage, allResults);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   return (
-    <div className="flex flex-col gap-4 max-w-2xl mx-auto">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          className="flex-grow px-4 py-2 border rounded"
-          placeholder="Search documents..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button
-          onClick={handleSearch}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-
-      {error && <p className="text-red-600">{error}</p>}
-
-      {/* Pagination controls */}
-      {allResults.length > 0 && (
-        <div className="flex justify-between items-center text-sm text-gray-700">
-          <button
-            onClick={() => handlePageChange(-1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      )}
+    // ... (The JSX for the search bar does not need to change)
+    <div className="flex gap-2 max-w-2xl mx-auto">
+      <input
+        type="text"
+        className="flex-grow px-4 py-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Search documents..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyPress={handleKeyPress}
+      />
+      <button
+        onClick={handleSearch}
+        disabled={loading}
+        className="bg-blue-600 text-white px-6 py-2 font-semibold rounded-md shadow-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+      >
+        {loading ? 'Searching...' : 'Search'}
+      </button>
     </div>
   );
 }
