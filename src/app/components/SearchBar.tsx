@@ -32,7 +32,7 @@ export default function SearchBar({ setResults, setLoading, setError, setGenerat
     try {
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
       const res = await fetch(
-        `${backendUrl}/docsearch/api/files/search?q=${encodeURIComponent(query)}&maxHits=100`
+        `${backendUrl}/docsearch/api/files/search?q=${encodeURIComponent(query)}`
       );
       
       if (!res.ok) {
